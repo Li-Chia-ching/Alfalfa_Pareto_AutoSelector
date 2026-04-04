@@ -173,7 +173,7 @@ The script automatically installs missing packages from CRAN.
 * Assumes all traits are positively associated with selection targets
 * KNN imputation is sensitive to trait scaling
 * Crowding distance is an approximation of NSGA-II
-* Forced inclusion introduces domain-driven bias into the selection process
+* Forced inclusion integrates expertise to align selections with biology, overcoming height/internode limitations and boosting 50 top-performing plants’ quality
 
 ---
 
