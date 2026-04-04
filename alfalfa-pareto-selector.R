@@ -133,32 +133,45 @@ df_scored <- df_std %>%
 
 initial_selected <- df_scored %>% slice_head(n = 50)
 
-# Force inclusion of specified plants
+# Force inclusion of specified plants (Fixed & Robust Mechanism)
 spec_list <- unique(c("A10","B30","B9","B14","C10","C13","E16","H4","I19","I21","I25","J26",
                       "M20","Q41","C31","C39","D41","D43","D44","E34","I41","K25","B31","Q42",
                       "S33","T37","P41","D11","D12","F6","H5","H8","C11","C9","D9","K3","N1"))
-spec_ids <- unique(paste0(substr(spec_list,1,1), "-", as.numeric(substr(spec_list,2,100))))
+
+# Convert format to "Row-Col"
+spec_ids <- unique(paste0(substr(spec_list, 1, 1), "-", as.numeric(substr(spec_list, 2, nchar(spec_list)))))
 existing_spec <- intersect(spec_ids, df_scored$Plant_ID)
 
-if (length(existing_spec) > 0) {
-  not_in_initial <- setdiff(existing_spec, initial_selected$Plant_ID)
-  if (length(not_in_initial) > 0) {
-    combined <- bind_rows(initial_selected, df_scored %>% filter(Plant_ID %in% not_in_initial)) %>%
-      distinct(Plant_ID, .keep_all = TRUE) %>%
-      arrange(Pareto_Rank, desc(Composite_Score))
-    if (nrow(combined) >= 50) {
-      final_selected <- combined[1:50, ]
-    } else {
-      extra <- df_scored %>% filter(!Plant_ID %in% combined$Plant_ID) %>%
-        arrange(Pareto_Rank, desc(Composite_Score)) %>% slice_head(n = 50 - nrow(combined))
-      final_selected <- bind_rows(combined, extra)
-    }
-  } else {
-    final_selected <- initial_selected
-  }
+cat("\nSpecified elite plants found in dataset:", length(existing_spec), "\n")
+
+# Step 1: Extract all specified plants that exist in the dataset unconditionally (reserve slots for preferred)
+forced_df <- df_scored %>% filter(Plant_ID %in% existing_spec)
+
+# Step 2: Calculate how many slots remain to reach a total of 50
+remaining_needed <- 50 - nrow(forced_df)
+
+if (remaining_needed > 0) {
+  # Step 3: Fill remaining slots by selecting the best candidates based on Pareto rank and composite score
+  filler_df <- df_scored %>%
+    filter(!Plant_ID %in% existing_spec) %>%
+    arrange(Pareto_Rank, desc(Composite_Score)) %>%
+    slice_head(n = remaining_needed)
+  
+  # Step 4: Merge the two groups and sort globally for cleaner output
+  final_selected <- bind_rows(forced_df, filler_df) %>%
+    arrange(Pareto_Rank, desc(Composite_Score))
+  
 } else {
-  final_selected <- initial_selected
+  # Defensive fallback: if the number of specified plants ≥ 50, keep the top 50 among them
+  final_selected <- forced_df %>%
+    arrange(Pareto_Rank, desc(Composite_Score)) %>%
+    slice_head(n = 50)
 }
+
+# (Diagnostic output to verify whether the mechanism is functioning)
+cat("Final selection composition:\n")
+cat(" - Forced Elites:", sum(final_selected$Plant_ID %in% existing_spec), "\n")
+cat(" - Algorithm Selected:", 50 - sum(final_selected$Plant_ID %in% existing_spec), "\n")
 
 # Mark final selection
 df_final <- df_scored %>%
@@ -169,17 +182,17 @@ plot_data <- df_final %>%
 
 # ==================== Visualization Module (Enhanced Robustness) ====================
 
-# 0. 防御性检查：确保绘图数据有效
+# 0. Defensive check: ensure plotting data is valid
 if (nrow(plot_data) == 0) stop("No data available for plotting.")
 required_cols <- c("Height_Apr", "Multi_Score", "Height_Mar", "Composite_Score", 
                    "Pareto_Rank", "Selected_Final", "Plant_ID")
 stopifnot(all(required_cols %in% colnames(plot_data)))
 
-# 1. 确保 Pareto_Rank 为有序因子（保证颜色图例顺序）
+# 1. Ensure Pareto_Rank is an ordered factor (to preserve legend order)
 plot_data <- plot_data %>%
   mutate(Pareto_Rank_factor = factor(Pareto_Rank, levels = sort(unique(Pareto_Rank))))
 
-# 2. 定义 Pareto 前沿线（Rank 1 按 April Height 排序）
+# 2. Define Pareto front line (Rank 1 sorted by April height)
 pareto_front_line <- plot_data %>%
   filter(Pareto_Rank == 1) %>%
   arrange(Height_Apr)
@@ -187,7 +200,7 @@ if (nrow(pareto_front_line) == 0) {
   warning("No Pareto front (Rank 1) found. Front line will not be drawn.")
 }
 
-# 3. 学术主题（右侧图例，垂直排列）
+# 3. Publication-style theme (legend on the right, vertically stacked)
 academic_theme <- theme_bw() +
   theme(
     plot.margin = margin(t = 20, r = 20, b = 20, l = 20, unit = "pt"),
@@ -238,7 +251,7 @@ p2 <- ggplot(plot_data, aes(x = Height_Mar, y = Height_Apr)) +
        subtitle = "Red target circles indicate the final 50 selected plants") +
   academic_theme
 
-# Plot 3: Parallel Coordinates (图例置于底部，因为横向空间更充裕)
+# Plot 3: Parallel coordinates (legend at bottom due to wider horizontal space)
 pcp_data <- plot_data %>%
   select(Plant_ID, Pareto_Rank, Selected_Final, Height_Mar, Height_Apr, Multi_Score) %>%
   mutate(Plot_Group = case_when(
@@ -270,7 +283,7 @@ p3_pcp <- ggplot(pcp_data, aes(x = Trait, y = Value_Scaled, group = Plant_ID, co
         plot.title = element_text(face = "bold", size = 15),
         axis.title = element_text(face = "bold"))
 
-# 输出
+# Output
 timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
 out_dir <- paste0("Alfalfa_Pareto_Select_", timestamp)
 dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
@@ -282,7 +295,7 @@ write_csv(final_selected, file.path(out_dir, "03_Final_Selected_50.csv"))
 write_csv(plot_data, file.path(out_dir, "04_Plotting_Data.csv"))
 write_csv(pcp_data, file.path(out_dir, "05_Parallel_Coords_Data.csv"))
 
-# 保存图片（确保目录存在，且宽度足够容纳右侧图例）
+# Save plots (ensure directory exists and width accommodates right-side legend)
 ggsave(file.path(out_dir, "Plot_Pareto_Selection.pdf"), p1, 
        width = 11, height = 7.5, dpi = 600, limitsize = FALSE)
 ggsave(file.path(out_dir, "Plot_Growth_Dynamics.pdf"), p2, 
