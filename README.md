@@ -1,196 +1,147 @@
-# Alfalfa Pareto Selector (V3.4)
+# Alfalfa Pareto Selector V3.5
 
 ## Overview
 
-This pipeline implements a multi-trait selection framework for alfalfa (Medicago sativa) using Pareto optimization. It integrates early growth traits and a morphological score to identify elite individuals under a multi-objective decision space.
+**Alfalfa Pareto Selector V3.5** is an integrated R pipeline for multi-trait selection in alfalfa (Medicago sativa), designed for field phenotyping datasets in matrix format. The workflow combines data cleaning, imputation, normalization, multi-objective optimization (Pareto ranking), and publication-quality visualization.
 
-Key features include:
+This version introduces a robust parallel coordinates plot with explicit category labeling and improved graphical output suitable for scientific publication.
 
-* Robust ingestion of matrix-formatted CSV data
-* Adaptive missing data handling (deletion or KNN imputation)
-* Trait standardization (Z-score)
-* Pareto ranking using non-dominated sorting
-* Diversity preservation via crowding distance
-* Forced inclusion of predefined elite genotypes
-* Publication-quality visualization (600 DPI)
+---
+
+## Key Features
+
+* Robust CSV parser for matrix-format field data (e.g., L1–L50 × A–U)
+* Automated missing data handling:
+
+  * Row removal (<5% missing)
+  * KNN imputation (k = 5) for larger gaps
+* Z-score standardization across traits
+* Multi-objective optimization:
+
+  * Pareto ranking (non-dominated sorting)
+  * Crowding distance estimation
+* Composite scoring for prioritization
+* Forced inclusion mechanism for elite individuals
+* Publication-ready visualization:
+
+  * Pareto scatter plot
+  * Growth dynamics plot
+  * Parallel coordinates plot with category labels
+* 600 DPI high-resolution output
 
 ---
 
 ## Input Data Format
 
-The script expects three CSV files in matrix format:
-
-* `Height_March.csv`
-* `Height_April.csv`
-* `Multifoliate_April.csv`
-
-### Structure
+Input files must be CSV matrices with the following structure:
 
 * First row: column identifiers (e.g., A–U)
 * First column: row identifiers (e.g., L1–L50)
-* Remaining cells: numeric values
+* Remaining cells: numeric trait values
 
-Each matrix is internally reshaped into long format and merged by a unique `Plant_ID` defined as:
+### Required Files
 
-```
-Plant_ID = Row_ID-Column_ID
-```
-
----
-
-## Traits Used
-
-* March Height (cm)
-* April Height (cm)
-* Multifoliate Score (1–5)
-
-All traits are treated as **maximization objectives**.
+| File Name                | Trait Description        |
+| ------------------------ | ------------------------ |
+| `Height_March.csv`       | Plant height in March    |
+| `Height_April.csv`       | Plant height in April    |
+| `Multifoliate_April.csv` | Multifoliate score (1–5) |
 
 ---
 
 ## Workflow
 
-### 1. Data Loading and Reshaping
+1. **Data Import & Reshaping**
 
-* Reads matrix-style CSV files
-* Converts to long format
-* Merges all traits into a unified dataset
+   * Convert matrix-format data into long format
+   * Generate unique `Plant_ID`
 
-### 2. Missing Data Handling
+2. **Missing Data Handling**
 
-* If missing rate < 5% → remove incomplete rows
-* Otherwise → apply KNN imputation (k = 5)
+   * Remove rows or apply KNN imputation
 
-### 3. Standardization
+3. **Standardization**
 
-* Z-score normalization applied to all traits
+   * Z-score normalization per trait
 
-### 4. Pareto Optimization
+4. **Pareto Optimization**
 
-* Non-dominated sorting (`emoa::nds_rank`)
-* Rank 1 = Pareto front
+   * Non-dominated sorting (Pareto rank)
+   * Crowding distance calculation
 
-### 5. Diversity Preservation
+5. **Selection Strategy**
 
-* Crowding distance calculated within each Pareto rank
-* Composite score:
+   * Top 50 individuals selected
+   * Forced inclusion of user-defined elite plants
 
-```
-Composite Score = Sum(Z-scores) × (1 + Crowding Distance)
-```
+6. **Visualization**
 
-### 6. Initial Selection
-
-* Top 50 individuals selected based on:
-
-  * Pareto rank (ascending)
-  * Composite score (descending)
-
-### 7. Forced Inclusion Mechanism
-
-* Predefined list of elite genotypes is always retained if present
-* Remaining slots are filled using algorithmic ranking
+   * Multi-panel plotting for trait relationships and trade-offs
 
 ---
 
-## Outputs
+## Output Files
 
-A timestamped directory is generated:
+All outputs are saved in a timestamped directory:
 
 ```
 Alfalfa_Pareto_Select_YYYYMMDD_HHMMSS/
 ```
 
-### Data Files
+### Data Outputs
 
-* `00_Raw_Merged_Data.csv` — merged raw dataset
-* `01_Full_Processed_Data.csv` — standardized and ranked data
-* `02_Initial_Top50.csv` — initial selection (pure algorithm)
-* `03_Final_Selected_50.csv` — final selection (after forced inclusion)
-* `04_Plotting_Data.csv` — visualization dataset
-* `05_Parallel_Coords_Data.csv` — parallel coordinates data
+| File                          | Description                        |
+| ----------------------------- | ---------------------------------- |
+| `00_Raw_Merged_Data.csv`      | Merged raw dataset                 |
+| `01_Full_Processed_Data.csv`  | Processed dataset with scores      |
+| `02_Initial_Top50.csv`        | Initial top 50 selection           |
+| `03_Final_Selected_50.csv`    | Final selection after constraints  |
+| `04_Plotting_Data.csv`        | Data used for visualization        |
+| `05_Parallel_Coords_Data.csv` | Data for parallel coordinates plot |
 
-### Figures (600 DPI)
+### Figures
 
-* `Plot_Pareto_Selection.pdf`
-* `Plot_Growth_Dynamics.pdf`
-* `Plot_Parallel_Coords.pdf`
-
----
-
-## Visualization
-
-### 1. Pareto Selection Plot
-
-* X-axis: April height
-* Y-axis: Multifoliate score
-* Color: Pareto rank
-* Size: Composite score
-* Highlights final selected individuals
-
-### 2. Growth Dynamics Plot
-
-* March vs April height
-* Includes 1:1 reference line
-
-### 3. Parallel Coordinates Plot
-
-* Displays multi-trait trade-offs
-* Highlights Pareto front and selected individuals
+| File                        | Description            |
+| --------------------------- | ---------------------- |
+| `Plot_Pareto_Selection.pdf` | Pareto scatter plot    |
+| `Plot_Growth_Dynamics.pdf`  | March vs April growth  |
+| `Plot_Parallel_Coords.pdf`  | Multi-trait trade-offs |
 
 ---
 
-## Dependencies
+## Installation
 
-Required R packages:
-
-```
-dplyr
-tidyr
-ggplot2
-stringr
-readr
-devEMF
-viridis
-emoa
-VIM
-ggrepel
+```r
+install.packages(c("dplyr", "tidyr", "ggplot2", "stringr", "readr",
+                   "devEMF", "viridis", "emoa", "VIM", "ggrepel"))
 ```
 
-The script automatically installs missing packages from CRAN.
+---
+
+## Usage
+
+1. Place input CSV files in the working directory
+2. Run the script:
+
+```r
+source("Alfalfa_Pareto_Selector_V3.4.R")
+```
+
+3. Outputs will be generated automatically
 
 ---
 
-## Reproducibility
+## Methodological Notes
 
-* Random seed fixed (`set.seed(2025)`) for KNN imputation
-* All intermediate datasets are exported
-
----
-
-## Notes and Limitations
-
-* Assumes all traits are positively associated with selection targets
-* KNN imputation is sensitive to trait scaling
-* Crowding distance is an approximation of NSGA-II
-* Forced inclusion integrates expertise to align selections with biology, overcoming height/internode limitations and boosting 50 top-performing plants’ quality
+* **Pareto ranking** identifies non-dominated individuals across traits
+* **Crowding distance** ensures diversity within Pareto fronts
+* **Composite score** integrates performance and diversity
+* **Parallel coordinates plot** enables intuitive visualization of multi-trait trade-offs
 
 ---
 
-## Intended Use
+## License
 
-This tool is designed for:
-
-* Early-generation selection in breeding programs
-* Multi-trait decision support
-* Visualization of trade-offs among agronomic traits
-
-It is best suited for structured experimental datasets with consistent layout.
+ **MIT License** 
 
 ---
-
-## Version
-
-**V3.4 (March–April 2025)**
-
-Includes enhanced visualization, improved robustness, and a hybrid selection mechanism combining optimization and expert knowledge.
