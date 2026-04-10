@@ -2,7 +2,7 @@
 
 ## Overview
 
-Alfalfa Pareto Selector V3.4 is an R-based pipeline for multi-trait selection in alfalfa (Medicago sativa), integrating data preprocessing, multi-objective optimization, and publication-quality visualization.
+Alfalfa Pareto Selector V3.5.1. is an R-based pipeline for multi-trait selection in alfalfa (*Medicago sativa*), integrating data preprocessing, multi-objective optimization, and publication-quality visualization.
 
 The framework is designed for matrix-format field data and supports robust selection of elite individuals using Pareto ranking and diversity-aware scoring.
 
