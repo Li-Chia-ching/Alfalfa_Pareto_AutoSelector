@@ -261,182 +261,53 @@ Compared to naive selection approaches, this pipeline:
 
 ---
 
-# Alfalfa Phenotypic Structure & Diversity Analysis (Pre-Pareto Module)
+# Alfalfa Agronomic Population Structure & Diversity Analysis 🌿
+**Pre-Pareto Optimization Module (V2.0)**
 
-## Overview
+![R](https://img.shields.io/badge/R-%23276DC3.svg?style=flat&logo=r&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-Publication_Ready-brightgreen)
 
-This repository provides an R-based pipeline for analyzing phenotypic population structure in alfalfa (*Medicago sativa*). The workflow is designed to identify subpopulation patterns in plant architecture traits prior to downstream selection procedures such as GWAS sampling or Pareto optimization.
+## 📌 Overview
+This repository contains the advanced R pipeline for analyzing the **agronomic population structure and plant architecture diversity** of Alfalfa (*Medicago sativa L.*). 
 
-The pipeline integrates robust data reshaping, missing data handling, multivariate analysis, clustering, and publication-quality visualization.
+Designed as a rigorous pre-requisite module before Multi-Objective Pareto Selection, this script evaluates the phenotypic landscape of 1,050 individual plants (50 families × 21 replicates). It identifies natural subpopulations, assesses trait redundancies, and ensures that subsequent elite plant selection maintains robust genetic diversity.
 
----
+## ✨ Key Features & Recent Updates
 
-## Key Features
+* 🛡️ **Strict Master Grid Integration (Anti-Phantom-Data):** Implements a definitive $1050$ plant matrix (`L1-L50` × `A-U`). It acts as a bulletproof parser that inherently filters out Excel-generated "ghost" rows/columns (e.g., `NA.xxx`) during CSV loading.
+* 📈 **Robust Statistical Upgrades:** Shifted from Pearson to **Spearman rank correlation** to scientifically handle the mixture of continuous variables (Plant Height) and ordinal variables (Multifoliate Score).
+* 🎓 **Publication-Ready Terminology:** Upgraded visual and output terminology from generic "Phenotypic Traits" to specific **"Agronomic Traits"** and **"Plant Architecture"**, adhering to high-impact agronomy journal standards.
+* 🎨 **Colorblind-Friendly Aesthetics:** Fully integrated with the `viridis` color palette (e.g., *cividis*, *magma*) for all K-means clustering and correlation plots, ensuring maximum accessibility and 600 DPI publication quality.
+* 🤖 **Intelligent Imputation:** Automated KNN (k=5) imputation triggered only if the missing data threshold exceeds 5%.
 
-* Robust matrix-to-long data transformation (`matrix_to_long`)
-* Automatic handling of irregular CSV matrix formats
-* Adaptive missing data strategy:
+## 📊 Analytical Pipeline
 
-  * <5% missing → row removal
-  * ≥5% missing → KNN imputation
-* Z-score standardization with matrix-safe conversion
-* Phenotypic correlation analysis
-* Principal Component Analysis (PCA)
-* K-means clustering with elbow method evaluation
-* High-resolution (600 DPI) figure export
-* Fully reproducible output structure
+1.  **Data Ingestion & Cleaning:** Reads raw field-layout CSVs and enforces the Master Grid structure.
+2.  **Missing Value Handling:** K-Nearest Neighbors (KNN) imputation via the `VIM` package.
+3.  **Z-Score Standardization:** Normalizes trait variances.
+4.  **Agronomic Correlation (Spearman):** Assesses trade-offs (e.g., Biomass potential vs. Forage quality).
+5.  **Principal Component Analysis (PCA):** Reduces dimensionality and visualizes overall plant architecture distribution.
+6.  **K-means Clustering:** Evaluates optimal $K$ (Elbow method) and stratifies the population into distinct architecture sub-groups to monitor genetic diversity.
 
----
+## 📂 Input Data Format
 
-## Input Data Format
+The script expects three CSV files in a spatial field layout (Matrix format) in the working directory:
+* `Height_March.csv` (Continuous)
+* `Height_April.csv` (Continuous)
+* `Multifoliate_April.csv` (Ordinal 1-5 score)
 
-The pipeline expects **matrix-style CSV files** (not tidy format):
+**CSV Structure Example:**
+|      | A   | B   | C   | ... | U   |
+|------|-----|-----|-----|-----|-----|
+| **L1** | 45  | 42  | NA  | ... | 50  |
+| **L2** | 39  | 40  | 41  | ... | 38  |
 
-### Required Files
+## 🚀 Usage
 
-* `Height_March.csv`
-* `Height_April.csv`
-* `Multifoliate_April.csv`
+Simply run the R script in your IDE (e.g., RStudio). The script will automatically check for missing dependencies and install them.
 
-### Expected Structure
-
-|    | C1 | C2 | C3 |
-| -- | -- | -- | -- |
-| R1 |    |    |    |
-| R2 |    |    |    |
-
-* First row: column identifiers
-* First column: row identifiers (family or line)
-* Remaining cells: trait values
-
-### Output ID Construction
-
-Each observation is converted into:
-
-```
-Plant_ID = Row_ID - Col_ID
-```
-
----
-
-## Workflow
-
-### 1. Data Loading
-
-* Convert matrix-format CSV to long format
-* Merge multiple traits by `Plant_ID`
-
-### 2. Missing Data Handling
-
-* Compute missing rate per trait
-* Apply rule-based cleaning or KNN imputation
-
-### 3. Standardization
-
-* Z-score normalization using `scale()`
-* Forced numeric conversion to avoid matrix-column issues
-
-### 4. Correlation Analysis
-
-* Pearson correlation matrix
-* Visualization via `corrplot`
-
-### 5. PCA
-
-* Performed on standardized traits
-* Biplot visualization using `factoextra`
-
-### 6. Clustering
-
-* Elbow method for optimal K estimation
-* K-means clustering (`nstart = 25`)
-
-### 7. Visualization
-
-* PCA-based cluster visualization
-* Elliptical grouping (with tolerance for outliers)
-
-### 8. Export
-
-* Full annotated dataset
-* PCA variance explained
-* Cluster summary statistics
-
----
-
-## Output Structure
-
-Results are saved in:
-
-```
-Pheno_Structure_Analysis_YYYYMMDD/
-```
-
-### Data Files
-
-* `Data_01_Pheno_Structure_Full.csv`
-* `Data_02_PCA_Variance.csv`
-* `Data_03_Cluster_Profiles.csv`
-
-### Figures
-
-* `Plot_00_Optimal_K_Elbow.pdf`
-* `Plot_01_Correlation_Matrix.pdf`
-* `Plot_02_PCA_Biplot.pdf`
-* `Plot_03_Subpopulations.pdf`
-
----
-
-## Dependencies
-
-```r
-dplyr
-tidyr
-ggplot2
-readr
-factoextra
-corrplot
-cluster
-stringr
-VIM
-```
-
-Install with:
-
-```r
-install.packages(c("dplyr","tidyr","ggplot2","readr","factoextra","corrplot","cluster","stringr","VIM"))
-```
-
----
-
-## Usage
-
-```r
-source("alfalfa_pheno_structure_pca_kmeans_pipeline.R")
-```
-
----
-
-## Methodological Notes
-
-* PCA is performed on pre-scaled data (no internal centering/scaling)
-* KNN imputation assumes phenotypic similarity reflects biological proximity
-* Ellipse fitting may fail for extreme outliers (does not affect clustering results)
-* Matrix-to-long conversion ensures compatibility with field-style data layouts
-
----
-
-## Applications
-
-* GWAS core population selection
-* Phenotypic diversity assessment
-* Pre-selection for sequencing
-* Trait architecture exploration
-
----
-
-## License
-
-MIT License
-
----
+```R
+# Required packages automatically handled by the script:
+# dplyr, tidyr, ggplot2, readr, factoextra, corrplot, cluster, stringr, VIM, viridis
+source("Alfalfa_Agronomic_Structure.R")
