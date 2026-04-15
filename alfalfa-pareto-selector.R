@@ -1,5 +1,5 @@
 # ==============================================================================
-# Alfalfa Pareto Selector V3.6 (March–April 2025)
+# Alfalfa Pareto Selector V3.6.1 (March–April 2025)
 # - Robust CSV reader with STRICT 1050 Master Grid (L1-L50 x A-U)
 # - Traits: March height, April height, multifoliate score (1–5)
 # - KNN imputation, Z-score standardization, Pareto ranking + crowding distance
@@ -123,7 +123,7 @@ df_std$Pareto_Rank <- nds_rank(t(-traits_matrix))
 
 calc_crowding <- function(df_rank) {
   if (nrow(df_rank) < 3) {
-    df_rank$Crowd_Dist <- 10  # [Fix] Use 10 instead of Inf to avoid downstream -Inf/NaN
+    df_rank$Crowd_Dist <- 10  # [Fix 1] Use 10 instead of Inf
     df_rank$Composite_Score <- (df_rank$Height_Mar_std + df_rank$Height_Apr_std + df_rank$Multi_Score_std) * (1 + 10)
     return(df_rank)
   }
@@ -139,7 +139,7 @@ calc_crowding <- function(df_rank) {
       (df_rank$Multi_Score_std[i+1] - df_rank$Multi_Score_std[i-1])/rng[3]
   }
   
-  # [Fix] Use 10 instead of Inf for boundary points
+  # [Fix 2] Use 10 instead of Inf to prevent downstream -Inf or NaN
   crowd[1] <- crowd[n] <- 10 
   
   df_rank$Crowd_Dist <- crowd
@@ -262,7 +262,7 @@ p2 <- ggplot(plot_data, aes(x = Height_Mar, y = Height_Apr)) +
   geom_point(aes(color = Selected_Final, size = Multi_Score), alpha = 0.7) +
   geom_abline(slope = 1, intercept = 0, linetype = "dashed", color = "gray40") +
   
-  # [Modification] Use colorblind‑optimized cividis palette
+  # [Modification] Use colorblind-optimized cividis palette
   scale_color_viridis_d(option = "cividis", name = "Final Selection") +
   scale_size_continuous(name = "Multi-Score") +
   labs(
